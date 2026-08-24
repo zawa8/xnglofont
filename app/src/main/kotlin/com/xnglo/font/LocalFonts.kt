@@ -2,16 +2,17 @@ package com.xnglo.font
 
 /**
  * Same font list, same order, as xNglobord's LocalFonts.kt and
- * translet-xnglo's components/hsciifp/LocalFontPicker.tsx. Keep all
- * three in sync. `assetFileName` is the matching file in
- * assets/fonts/.
+ * translet-xnglo's components/hsciifp/LocalFontPicker.tsx, minus
+ * binaryfont (excluded per instruction -- source is
+ * zawa8/font/ttf/hscii/englosoftw8/englosoftw8utf/, all 14 files
+ * except binarywenglosoftw8utf.ttf). Keep all three in sync.
+ * `assetFileName` is the matching file in assets/fonts/.
  */
 data class LocalFontOption(val id: String, val displayName: String, val assetFileName: String)
 
 object LocalFonts {
-    // please do not change order (matches LocalFontPicker.tsx / xNglobord's LocalFonts.kt)
+    // please do not change order (matches LocalFontPicker.tsx / xNglobord's LocalFonts.kt, minus binaryfont)
     val ALL: List<LocalFontOption> = listOf(
-        LocalFontOption("binaryfont", "binary(01)", "binaryfont.ttf"),
         LocalFontOption("eng52font", "e52", "eng52font.ttf"),
         LocalFontOption("xng52font", "xNgloiNgliS", "xng52font.ttf"),
         LocalFontOption("xv38fontid", "xNglovinqi", "xv38fontid.ttf"),
