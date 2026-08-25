@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
@@ -16,10 +17,13 @@ class MainActivity : Activity() {
     private lateinit var logView: TextView
     private lateinit var selectedFont: LocalFontOption
     private lateinit var statusView: TextView
+    private lateinit var makeDefaultCheckbox: CheckBox
+    private lateinit var reapplyOnBootCheckbox: CheckBox
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        selectedFont = LocalFonts.ALL.first()
+        val savedDefaultId = FontPrefs.getDefaultFontId(this)
+        selectedFont = LocalFonts.byId(savedDefaultId ?: "") ?: LocalFonts.ALL.first()
         setContentView(buildLayout())
         checkRootAndShowStatus()
     }
@@ -68,6 +72,8 @@ class MainActivity : Activity() {
         val spinner = Spinner(this)
         val names = LocalFonts.ALL.map { it.displayName }
         spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, names)
+        val initialIndex = LocalFonts.ALL.indexOf(selectedFont).let { if (it < 0) 0 else it }
+        spinner.setSelection(initialIndex)
         spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
                 selectedFont = LocalFonts.ALL[position]
@@ -75,6 +81,33 @@ class MainActivity : Activity() {
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
         root.addView(spinner)
+
+        val checkboxPad = (padding * 0.75).toInt()
+
+        makeDefaultCheckbox = CheckBox(this).apply {
+            text = "Make this the default font"
+            setTextColor(0xFFE2E8F0.toInt())
+            isChecked = true
+            setPadding(0, checkboxPad, 0, 0)
+        }
+        root.addView(makeDefaultCheckbox)
+
+        reapplyOnBootCheckbox = CheckBox(this).apply {
+            text = "Re-apply after every reboot"
+            setTextColor(0xFFE2E8F0.toInt())
+            isChecked = true
+        }
+        root.addView(reapplyOnBootCheckbox)
+
+        val checkboxNote = TextView(this).apply {
+            text = "The Magisk overlay itself always persists across reboots automatically. " +
+                "This adds a second, independent safety net that re-copies the font from a " +
+                "backup kept inside the module on every boot."
+            setTextColor(0xFF64748B.toInt())
+            textSize = 11f
+            setPadding(0, 4, 0, 0)
+        }
+        root.addView(checkboxNote)
 
         val buttonRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -145,10 +178,18 @@ class MainActivity : Activity() {
 
     private fun runInstall() {
         val font = selectedFont
+        val makeDefault = makeDefaultCheckbox.isChecked
+        val reapplyOnBoot = reapplyOnBootCheckbox.isChecked
+
         appendLog("Installing ${font.displayName}...")
         thread {
-            val result = RootFontInstaller.install(this, font)
+            val result = RootFontInstaller.install(this, font, reapplyOnBoot)
             appendLog((if (result.success) "✓ " else "✗ ") + result.message)
+
+            if (result.success && makeDefault) {
+                FontPrefs.setDefaultFontId(this, font.id)
+                appendLog("✓ Saved ${font.displayName} as the default font")
+            }
         }
     }
 

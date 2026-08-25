@@ -61,7 +61,7 @@ object RootFontInstaller {
         return result.stdout.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     }
 
-    fun install(context: Context, option: LocalFontOption): InstallResult {
+    fun install(context: Context, option: LocalFontOption, reapplyOnBoot: Boolean = true): InstallResult {
         if (!RootShell.hasRoot()) {
             return InstallResult(false, "No root access. This app only works on a rooted device (Magisk).")
         }
@@ -105,13 +105,42 @@ object RootFontInstaller {
         }
         commands.add("chmod 644 $moduleRoot/module.prop")
 
+        // Magisk's magic-mount already re-overlays these files on every
+        // boot automatically -- that part needs no extra script. What
+        // reapplyOnBoot adds is a *second, independent* safety net: a
+        // permanent copy of the font kept inside the module itself
+        // (font_backup.ttf, not dependent on this app's storage
+        // surviving), plus a service.sh that re-copies it onto every
+        // target path late in each boot. Belt-and-suspenders in case
+        // anything else ever touches those files between boots.
+        if (reapplyOnBoot) {
+            val backupPath = "$moduleRoot/font_backup.ttf"
+            commands.add("cp '${staged.absolutePath}' '$backupPath'")
+            commands.add("chmod 644 '$backupPath'")
+
+            val targetsList = fontFiles.joinToString("\n")
+            commands.add("cat > $moduleRoot/font_targets.txt << 'EOF'\n$targetsList\nEOF")
+
+            val serviceScript = """
+                #!/system/bin/sh
+                MODDIR=${'$'}{0%/*}
+                while IFS= read -r target; do
+                  cp "${'$'}MODDIR/font_backup.ttf" "${'$'}target" 2>/dev/null
+                  chmod 644 "${'$'}target" 2>/dev/null
+                done < "${'$'}MODDIR/font_targets.txt"
+            """.trimIndent()
+            commands.add("cat > $moduleRoot/service.sh << 'EOF'\n$serviceScript\nEOF")
+            commands.add("chmod 755 $moduleRoot/service.sh")
+        }
+
         val result = RootShell.run(*commands.toTypedArray())
         staged.delete()
 
         return if (result.exitCode == 0) {
+            val bootNote = if (reapplyOnBoot) " Will re-apply itself on every future boot." else ""
             InstallResult(
                 true,
-                "Installed as Magisk module \"$id\", overlaying ${fontFiles.size} font file(s). Reboot to apply."
+                "Installed as Magisk module \"$id\", overlaying ${fontFiles.size} font file(s). Reboot to apply.$bootNote"
             )
         } else {
             InstallResult(false, "Install failed: ${result.stderr.ifBlank { result.stdout }}")
