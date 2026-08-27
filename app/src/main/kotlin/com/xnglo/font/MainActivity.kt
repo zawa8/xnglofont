@@ -23,7 +23,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val savedDefaultId = FontPrefs.getDefaultFontId(this)
-        selectedFont = LocalFonts.byId(savedDefaultId ?: "") ?: LocalFonts.ALL.first()
+        selectedFont = LocalFonts.byId(savedDefaultId ?: LocalFonts.DEFAULT_FONT_ID)
+            ?: LocalFonts.ALL.first()
         setContentView(buildLayout())
         checkRootAndShowStatus()
     }
