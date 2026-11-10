@@ -21,27 +21,26 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Generate Gradle wrapper
-        run: gradle wrapper --gradle-version 8.7
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
 
-      - name: Rename APK with build number
+      - name: Rename APK
         run: |
           mkdir -p out
           cp app/build/outputs/apk/debug/app-debug.apk "out/xnglofont-debug-${{ github.run_number }}.apk"
 
-      - name: Upload APK as workflow artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: xnglofont-debug-apk
+          name: xnglofont-apk
           path: out/*.apk
 
-      - name: Publish as a GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
