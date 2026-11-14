@@ -21,18 +21,20 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
 
       - name: Rename APK
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/debug/app-debug.apk "out/xnglofont-debug-${{ github.run_number }}.apk"
+          find . -name "*.apk" -path "*/debug/*" | head -1 | xargs -I{} cp {} "out/xnglofont-debug-${{ github.run_number }}.apk"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
