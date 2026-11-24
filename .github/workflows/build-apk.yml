@@ -21,17 +21,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept SDK licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Install SDK platform 34
-        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
-
-      - name: Create local.properties
-        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Setup Android SDK + local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" ||           $ANDROID_HOME/cmdline-tools/*/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" || true
 
       - name: Generate Gradle wrapper
         run: gradle wrapper --gradle-version 8.9
@@ -42,7 +35,7 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p out
-          find . -name "*.apk" -path "*/debug/*" | head -1 | xargs -I{} cp {} "out/xnglofont-debug-${{ github.run_number }}.apk"
+          find . -name "*.apk" -path "*/debug/*" | head -1 |             xargs -I{} cp {} "out/xnglofont-debug-${{ github.run_number }}.apk"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
